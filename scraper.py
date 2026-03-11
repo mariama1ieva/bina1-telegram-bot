@@ -1,53 +1,56 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://textise.net/showtext.aspx?strURL=https://bina.az/items/vipped"
+API = "https://bina.az/items/vipped"
 
 headers = {
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json"
 }
 
-def send(text):
-    api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+def send(msg):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-    requests.post(api, data={
+    requests.post(url, data={
         "chat_id": CHAT_ID,
-        "text": text
+        "text": msg
     })
 
 
-print("Loading bina.az")
+print("Checking bina.az")
 
-r = requests.get(URL, headers=headers)
+r = requests.get(API, headers=headers)
 
-soup = BeautifulSoup(r.text, "html.parser")
+text = r.text
 
-links = soup.find_all("a")
+links = []
 
-found = 0
+for part in text.split('"id":'):
 
-for a in links:
+    num = ""
 
-    href = a.get("href")
+    for c in part:
 
-    if not href:
-        continue
-
-    if "/items/" in href and href.split("/")[-1].isdigit():
-
-        link = "https://bina.az" + href
-
-        print("Sending:", link)
-
-        send(link)
-
-        found += 1
-
-        if found == 10:
+        if c.isdigit():
+            num += c
+        else:
             break
 
-print("Total:", found)
+    if len(num) > 5:
+
+        link = f"https://bina.az/items/{num}"
+
+        if link not in links:
+            links.append(link)
+
+
+print("Found:", len(links))
+
+for link in links[:10]:
+
+    print("Sending:", link)
+
+    send(link)
