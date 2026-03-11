@@ -8,59 +8,42 @@ CHAT_ID = os.getenv("CHAT_ID")
 URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
 
 headers = {
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
 def send_photo(photo, caption):
-
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-
-    requests.post(url, data={
+    api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    requests.post(api, data={
         "chat_id": CHAT_ID,
         "photo": photo,
-        "caption": caption,
-        "parse_mode": "HTML"
+        "caption": caption
     })
 
-
-print("Checking bina.az")
+print("Loading page...")
 
 r = requests.get(URL, headers=headers)
+print("Status:", r.status_code)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
-ads = soup.select('[data-cy="item-card"]')
+cards = soup.select('[data-cy="item-card"]')
+print("Found:", len(cards))
 
-print("Found:", len(ads))
-
-for ad in ads[:10]:
-
-    link_tag = ad.select_one('[data-cy="item-card-link"]')
-    price_tag = ad.select_one('[data-cy="item-card-price-full"]')
-    location_tag = ad.select_one('.sc-8bfc75d7-15')
-    info_tag = ad.select_one('.sc-8bfc75d7-16')
-    img_tag = ad.select_one("img")
+for card in cards[:10]:
+    link_tag = card.select_one('[data-cy="item-card-link"]')
+    price_tag = card.select_one('[data-cy="item-card-price-full"]')
+    img_tag = card.select_one("img")
 
     if not link_tag:
         continue
 
     link = "https://bina.az" + link_tag["href"]
-
     price = price_tag.text.strip() if price_tag else ""
-    location = location_tag.text.strip() if location_tag else ""
-    info = info_tag.text.strip() if info_tag else ""
+    image = img_tag["src"] if img_tag else ""
 
-    img = img_tag["src"] if img_tag else ""
-
-    caption = f"""
-🏠 <b>{price} AZN</b>
-
-📍 {location}
-📊 {info}
-
-🔗 {link}
-"""
+    text = f"{price}\n{link}"
 
     print("Sending:", link)
 
-    send_photo(img, caption)
+    if image:
+        send_photo(image, text)
