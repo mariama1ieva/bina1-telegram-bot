@@ -11,12 +11,16 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-def send(msg):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+def send_photo(photo, caption):
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+
     requests.post(url, data={
         "chat_id": CHAT_ID,
-        "text": msg
+        "photo": photo,
+        "caption": caption
     })
+
 
 print("Checking bina.az...")
 
@@ -24,19 +28,27 @@ r = requests.get(URL, headers=headers)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
-ads = soup.select("a[href*='/items/']")
+ads = soup.find_all("div", class_="items-i")
 
-sent = set()
+for ad in ads[:10]:
 
-for ad in ads[:15]:
+    link_tag = ad.find("a")
+    img_tag = ad.find("img")
+    price_tag = ad.find("div", class_="price-val")
+    title_tag = ad.find("div", class_="card-title")
 
-    link = "https://bina.az" + ad.get("href")
-
-    if link in sent:
+    if not link_tag:
         continue
 
-    print("Sending:", link)
+    link = "https://bina.az" + link_tag["href"]
 
-    send(link)
+    image = img_tag["src"] if img_tag else None
+    price = price_tag.text.strip() if price_tag else ""
+    title = title_tag.text.strip() if title_tag else ""
 
-    sent.add(link)
+    caption = f"{title}\n{price}\n{link}"
+
+    print("Send:", caption)
+
+    if image:
+        send_photo(image, caption)
