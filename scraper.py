@@ -5,20 +5,18 @@ from bs4 import BeautifulSoup
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
+URL = "https://textise.net/showtext.aspx?strURL=https://bina.az/items/vipped"
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "User-Agent": "Mozilla/5.0"
 }
 
-def send_photo(photo, caption):
-
-    api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+def send(text):
+    api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
     requests.post(api, data={
         "chat_id": CHAT_ID,
-        "photo": photo,
-        "caption": caption
+        "text": text
     })
 
 
@@ -28,28 +26,28 @@ r = requests.get(URL, headers=headers)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
-cards = soup.select('[data-cy="item-card"]')
+links = soup.find_all("a")
 
-print("Found:", len(cards))
+found = 0
 
-for card in cards[:10]:
+for a in links:
 
-    link_tag = card.select_one('[data-cy="item-card-link"]')
-    price_tag = card.select_one('[data-cy="item-card-price-full"]')
-    location_tag = card.select_one('[data-cy="city_when"]')
-    img_tag = card.select_one("img")
+    href = a.get("href")
 
-    if not link_tag:
+    if not href:
         continue
 
-    link = link_tag["href"]
-    price = price_tag.text.strip() if price_tag else ""
-    location = location_tag.text.strip() if location_tag else ""
-    image = img_tag["src"] if img_tag else ""
+    if "/items/" in href and href.split("/")[-1].isdigit():
 
-    text = f"{price} AZN\n{location}\n{link}"
+        link = "https://bina.az" + href
 
-    print("Sending:", link)
+        print("Sending:", link)
 
-    if image:
-        send_photo(image, text)
+        send(link)
+
+        found += 1
+
+        if found == 10:
+            break
+
+print("Total:", found)
