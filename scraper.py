@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from bs4 import BeautifulSoup
 
@@ -11,10 +12,23 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
+SEEN_FILE = "seen.json"
+
+
+def load_seen():
+    if os.path.exists(SEEN_FILE):
+        with open(SEEN_FILE) as f:
+            return set(json.load(f))
+    return set()
+
+
+def save_seen(seen):
+    with open(SEEN_FILE, "w") as f:
+        json.dump(list(seen), f)
+
+
 def send_photo(photo, caption):
-
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-
     requests.post(url, data={
         "chat_id": CHAT_ID,
         "photo": photo,
@@ -24,13 +38,15 @@ def send_photo(photo, caption):
 
 print("Checking bina.az...")
 
+seen = load_seen()
+
 r = requests.get(URL, headers=headers)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
 ads = soup.find_all("div", class_="items-i")
 
-for ad in ads[:10]:
+for ad in ads:
 
     link_tag = ad.find("a")
     img_tag = ad.find("img")
@@ -42,13 +58,20 @@ for ad in ads[:10]:
 
     link = "https://bina.az" + link_tag["href"]
 
+    if link in seen:
+        continue
+
     image = img_tag["src"] if img_tag else None
     price = price_tag.text.strip() if price_tag else ""
     title = title_tag.text.strip() if title_tag else ""
 
     caption = f"{title}\n{price}\n{link}"
 
-    print("Send:", caption)
+    print("NEW:", caption)
 
     if image:
         send_photo(image, caption)
+
+    seen.add(link)
+
+save_seen(seen)
