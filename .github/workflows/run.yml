@@ -20,7 +20,7 @@ jobs:
       - name: Install requirements
         run: pip install -r requirements.txt
 
-      - name: Run script
+      - name: Run bot
         run: python scraper.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
