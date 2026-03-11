@@ -1,25 +1,16 @@
 import os
 import json
 import requests
-from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URLS = [
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&subwayStation=51&subwayStation=33&subwayStation=54&subwayStation=52&subwayStation=53&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=&groupSimilar=true&search=",
-
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&district=74&district=69&district=100&district=91&district=99&district=200&district=75&district=81&district=82&district=85&district=84&district=83&district=92&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=&groupSimilar=true&search=",
-
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&orientmark=315&orientmark=385&orientmark=178&orientmark=371&orientmark=179&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=&groupSimilar=true&search=",
-
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=Razin&groupSimilar=true&search=",
-
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=La%C3%A7%C4%B1n+ticar%C9%99t+m%C9%99rk%C9%99zi&groupSimilar=true&search=",
-
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=Ruslan+93&groupSimilar=true&search=",
-
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=Diqlas&groupSimilar=true&search="
+SEARCH_URLS = [
+"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&subwayStation=51&subwayStation=33&subwayStation=54&subwayStation=52&subwayStation=53&documentType=-1&loanType=-1&minFloor=2&maxFloor=31",
+"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&district=74&district=69&district=100&district=91&district=99&district=200&district=75&district=81&district=82&district=85&district=84&district=83&district=92",
+"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&words=Razin",
+"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&words=Diqlas"
 ]
 
 BLACKLIST = [
@@ -29,19 +20,18 @@ BLACKLIST = [
 "agent",
 "əmlakçı",
 "emlakci",
-"ofis",
 "komissiya",
 "xidmət haqqı"
 ]
 
-KUPCA = [
+KUPCA_WORDS = [
 "kupça",
 "kupcali",
 "çıxarış",
 "cixaris"
 ]
 
-SEEN_FILE = "seen.json"
+SEEN_FILE = "seen_ads.json"
 
 
 def load_seen():
@@ -56,49 +46,90 @@ def save_seen(seen):
         json.dump(list(seen), f)
 
 
-def send(msg):
+def send_telegram(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
 
 
-headers = {"User-Agent": "Mozilla/5.0"}
+def parse_query(url):
+    parsed = urlparse(url)
+    qs = parse_qs(parsed.query)
 
-seen = load_seen()
+    params = {}
 
-for url in URLS:
+    for k, v in qs.items():
+        params[k] = v[0]
 
-    r = requests.get(url, headers=headers)
-    soup = BeautifulSoup(r.text, "html.parser")
+    return params
 
-    for a in soup.find_all("a", href=True):
 
-        link = a["href"]
+def get_ads(params):
 
-        if "/elan/" not in link:
-            continue
+    API = "https://kub.az/api/ads/search"
 
-        full = "https://kub.az" + link
+    r = requests.get(API, params=params, timeout=30)
 
-        if full in seen:
-            continue
+    if r.status_code != 200:
+        return []
 
-        try:
+    data = r.json()
 
-            ad = requests.get(full, headers=headers)
-            text = ad.text.lower()
+    if "ads" not in data:
+        return []
 
-            if any(w in text for w in BLACKLIST):
-                seen.add(full)
+    return data["ads"]
+
+
+def is_agent(text):
+    t = text.lower()
+    return any(w in t for w in BLACKLIST)
+
+
+def has_kupca(text):
+    t = text.lower()
+    return any(w in t for w in KUPCA_WORDS)
+
+
+def main():
+
+    seen = load_seen()
+
+    for search_url in SEARCH_URLS:
+
+        params = parse_query(search_url)
+
+        ads = get_ads(params)
+
+        for ad in ads[:20]:
+
+            ad_id = str(ad.get("id"))
+
+            if ad_id in seen:
                 continue
 
-            if not any(w in text for w in KUPCA):
-                seen.add(full)
+            title = ad.get("title", "")
+            description = ad.get("description", "")
+            price = ad.get("price", "")
+            url = f"https://kub.az/elan/{ad_id}"
+
+            text = (title + " " + description).lower()
+
+            if is_agent(text):
+                seen.add(ad_id)
                 continue
 
-            send(full)
-            seen.add(full)
+            if not has_kupca(text):
+                seen.add(ad_id)
+                continue
 
-        except:
-            pass
+            message = f"{title}\nQiymət: {price}\n{url}"
 
-save_seen(seen)
+            send_telegram(message)
+
+            seen.add(ad_id)
+
+    save_seen(seen)
+
+
+if __name__ == "__main__":
+    main()
