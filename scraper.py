@@ -1,57 +1,66 @@
 import os
-import re
 import requests
 from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://bina.az/baki/alqi-satqi/menziller?has_bill_of_sale=true"
+URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)"
+    "User-Agent": "Mozilla/5.0"
 }
 
-def send(msg):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+def send_photo(photo, caption):
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+
     requests.post(url, data={
         "chat_id": CHAT_ID,
-        "text": msg
+        "photo": photo,
+        "caption": caption,
+        "parse_mode": "HTML"
     })
 
 
-print("Loading bina.az")
+print("Checking bina.az")
 
 r = requests.get(URL, headers=headers)
 
-print("Status:", r.status_code)
-
 soup = BeautifulSoup(r.text, "html.parser")
 
-links = soup.select("a")
+ads = soup.select('[data-cy="item-card"]')
 
-found = 0
+print("Found:", len(ads))
 
-for link in links:
+for ad in ads[:10]:
 
-    href = link.get("href")
+    link_tag = ad.select_one('[data-cy="item-card-link"]')
+    price_tag = ad.select_one('[data-cy="item-card-price-full"]')
+    location_tag = ad.select_one('.sc-8bfc75d7-15')
+    info_tag = ad.select_one('.sc-8bfc75d7-16')
+    img_tag = ad.select_one("img")
 
-    if not href:
+    if not link_tag:
         continue
 
-    # only real listings
-    if not re.match(r"^/items/\d+$", href):
-        continue
+    link = "https://bina.az" + link_tag["href"]
 
-    full_link = "https://bina.az" + href
+    price = price_tag.text.strip() if price_tag else ""
+    location = location_tag.text.strip() if location_tag else ""
+    info = info_tag.text.strip() if info_tag else ""
 
-    print("Sending:", full_link)
+    img = img_tag["src"] if img_tag else ""
 
-    send(full_link)
+    caption = f"""
+🏠 <b>{price} AZN</b>
 
-    found += 1
+📍 {location}
+📊 {info}
 
-    if found >= 10:
-        break
+🔗 {link}
+"""
 
-print("Total sent:", found)
+    print("Sending:", link)
+
+    send_photo(img, caption)
