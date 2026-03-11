@@ -11,11 +11,12 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-
 def send(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
-
+    requests.post(url, data={
+        "chat_id": CHAT_ID,
+        "text": msg
+    })
 
 print("Checking bina.az...")
 
@@ -23,34 +24,19 @@ r = requests.get(URL, headers=headers)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
-ads = soup.find_all("div", class_="items-i")
+ads = soup.select("a[href*='/items/']")
 
 sent = set()
 
-for ad in ads:
+for ad in ads[:15]:
 
-    link_tag = ad.find("a")
-    if not link_tag:
-        continue
-
-    link = "https://bina.az" + link_tag["href"]
+    link = "https://bina.az" + ad.get("href")
 
     if link in sent:
         continue
 
-    price = ad.find("div", class_="price-val")
-    title = ad.find("div", class_="card-title")
+    print("Sending:", link)
 
-    description = ad.text.lower()
-
-
-    price_text = price.text.strip() if price else "No price"
-    title_text = title.text.strip() if title else ""
-
-    message = f"{title_text}\n{price_text}\n{link}"
-
-    print("Send:", message)
-
-    send(message)
+    send(link)
 
     sent.add(link)
