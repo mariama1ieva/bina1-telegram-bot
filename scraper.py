@@ -43,9 +43,6 @@ for ad in ads:
 
     description = ad.text.lower()
 
-    # Agent filtr
-    if "agent" in description or "vasitəçi" in description:
-        continue
 
     price_text = price.text.strip() if price else "No price"
     title_text = title.text.strip() if title else ""
