@@ -1,59 +1,57 @@
 import os
+import re
 import requests
-import json
+from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-API_URL = "https://bina.az/items/all"
-
-params = {
-    "city_id": 1,
-    "category_id": 1,
-    "has_bill_of_sale": "true"
-}
+URL = "https://bina.az/baki/alqi-satqi/menziller?has_bill_of_sale=true"
 
 headers = {
-    "User-Agent": "Mozilla/5.0",
-    "Accept": "application/json"
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)"
 }
 
 def send(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
     requests.post(url, data={
         "chat_id": CHAT_ID,
         "text": msg
     })
 
 
-print("Checking bina.az API")
+print("Loading bina.az")
 
-r = requests.get(API_URL, headers=headers, params=params)
+r = requests.get(URL, headers=headers)
 
-data = r.text
+print("Status:", r.status_code)
 
-print("Response length:", len(data))
+soup = BeautifulSoup(r.text, "html.parser")
 
-items = []
+links = soup.select("a")
 
-try:
-    items = json.loads(data)["items"]
-except:
-    print("JSON parse failed")
+found = 0
 
-print("Found items:", len(items))
+for link in links:
 
-for item in items[:10]:
+    href = link.get("href")
 
-    item_id = item["id"]
+    if not href:
+        continue
 
-    link = f"https://bina.az/items/{item_id}"
+    # only real listings
+    if not re.match(r"^/items/\d+$", href):
+        continue
 
-    price = item["price"]
+    full_link = "https://bina.az" + href
 
-    text = f"{price} AZN\n{link}"
+    print("Sending:", full_link)
 
-    print("Sending:", link)
+    send(full_link)
 
-    send(text)
+    found += 1
+
+    if found >= 10:
+        break
+
+print("Total sent:", found)
