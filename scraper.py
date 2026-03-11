@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://kub.az/"
+URL = "https://bina.az/baki/alqi-satqi/menziller?has_bill_of_sale=true&location_ids%5B%5D=51&location_ids%5B%5D=33&location_ids%5B%5D=54&location_ids%5B%5D=52&location_ids%5B%5D=53&location_ids%5B%5D=405&location_ids%5B%5D=378&location_ids%5B%5D=179&location_ids%5B%5D=178&location_ids%5B%5D=100&location_ids%5B%5D=99&location_ids%5B%5D=200&location_ids%5B%5D=74&location_ids%5B%5D=69&location_ids%5B%5D=91&location_ids%5B%5D=81&location_ids%5B%5D=82&location_ids%5B%5D=85&location_ids%5B%5D=84&location_ids%5B%5D=83"
 
 headers = {
     "User-Agent": "Mozilla/5.0"
@@ -14,48 +14,46 @@ headers = {
 
 def send(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={
-        "chat_id": CHAT_ID,
-        "text": msg
-    })
+    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
 
 
-def is_agent(item):
-    agent = item.find("span", class_="item-owner-type")
-    return agent is not None
-
-
-def has_kupca(item):
-    cert = item.find("div", class_="item-certificate")
-    return cert is not None
-
-
-print("Start scraping kub.az")
+print("Checking bina.az...")
 
 r = requests.get(URL, headers=headers)
 
 soup = BeautifulSoup(r.text, "html.parser")
 
-items = soup.find_all("div", class_="item")
+ads = soup.find_all("div", class_="items-i")
 
-for item in items:
+sent = set()
 
-    if is_agent(item):
+for ad in ads:
+
+    link_tag = ad.find("a")
+    if not link_tag:
         continue
 
-    if not has_kupca(item):
+    link = "https://bina.az" + link_tag["href"]
+
+    if link in sent:
         continue
 
-    price = item.find("span", class_="price-amount")
-    link = item.find("a")
+    price = ad.find("div", class_="price-val")
+    title = ad.find("div", class_="card-title")
 
-    if price and link:
+    description = ad.text.lower()
 
-        price_text = price.text.strip()
-        link_text = "https://kub.az" + link["href"]
+    # Agent filtr
+    if "agent" in description or "vasitəçi" in description:
+        continue
 
-        message = f"{price_text} AZN\n{link_text}"
+    price_text = price.text.strip() if price else "No price"
+    title_text = title.text.strip() if title else ""
 
-        print("Send:", message)
+    message = f"{title_text}\n{price_text}\n{link}"
 
-        send(message)
+    print("Send:", message)
+
+    send(message)
+
+    sent.add(link)
