@@ -6,30 +6,31 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 URLS = [
-    "https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&subwayStation=51&subwayStation=33&subwayStation=54&subwayStation=52&subwayStation=53&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=&groupSimilar=true&search=",
+        "https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&subwayStation=51&subwayStation=33&subwayStation=54&subwayStation=52&subwayStation=53&documentType=-1&loanType=-1&oneRoom=false&twoRoom=false&threeRoom=false&fourRoom=false&fiveMoreRoom=false&remakeType=-1&minFloor=2&maxFloor=31&minBuildingFloors=1&maxBuildingFloors=31&minPrice=&maxPrice=&minArea=&maxArea=&minPricePerSquareMeter=&maxPricePerSquareMeter=&minParcelArea=&maxParcelArea=&words=&groupSimilar=true&search=",
 ]
 
-def send_telegram(message):
+def send(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    requests.post(url, data=data)
+    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
 
-def parse():
-    for url in URLS:
-        r = requests.get(url)
-        soup = BeautifulSoup(r.text, "html.parser")
+print("Script started")
 
-        ads = soup.select(".products-i")[:5]
+for url in URLS:
+    print("Checking:", url)
 
-        for ad in ads:
-            title = ad.select_one(".products-name").text.strip()
-            link = ad.select_one("a")["href"]
+    r = requests.get(url, headers={
+        "User-Agent": "Mozilla/5.0"
+    })
 
-            msg = f"{title}\nhttps://kub.az{link}"
-            send_telegram(msg)
+    soup = BeautifulSoup(r.text, "html.parser")
 
-if __name__ == "__main__":
-    parse()
+    ads = soup.find_all("a", href=True)
+
+    for a in ads:
+        link = a["href"]
+
+        if "/elan/" in link:
+            full = "https://kub.az" + link
+            print("Found:", full)
+            send(full)
+            break
