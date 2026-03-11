@@ -1,135 +1,61 @@
 import os
-import json
 import requests
-from urllib.parse import urlparse, parse_qs
+from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-SEARCH_URLS = [
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&subwayStation=51&subwayStation=33&subwayStation=54&subwayStation=52&subwayStation=53&documentType=-1&loanType=-1&minFloor=2&maxFloor=31",
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&district=74&district=69&district=100&district=91&district=99&district=200&district=75&district=81&district=82&district=85&district=84&district=83&district=92",
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&words=Razin",
-"https://kub.az/search?adsDateCat=All&entityType=0&buildingType=-1&purpose=0&ownerType=0&city=1&words=Diqlas"
-]
+URL = "https://kub.az/"
 
-BLACKLIST = [
-"makler",
-"vasitəçi",
-"vasiteci",
-"agent",
-"əmlakçı",
-"emlakci",
-"komissiya",
-"xidmət haqqı"
-]
-
-KUPCA_WORDS = [
-"kupça",
-"kupcali",
-"çıxarış",
-"cixaris"
-]
-
-SEEN_FILE = "seen_ads.json"
+headers = {
+    "User-Agent": "Mozilla/5.0"
+}
 
 
-def load_seen():
-    if os.path.exists(SEEN_FILE):
-        with open(SEEN_FILE) as f:
-            return set(json.load(f))
-    return set()
-
-
-def save_seen(seen):
-    with open(SEEN_FILE, "w") as f:
-        json.dump(list(seen), f)
-
-
-def send_telegram(msg):
+def send(msg):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+    requests.post(url, data={
+        "chat_id": CHAT_ID,
+        "text": msg
+    })
 
 
-def parse_query(url):
-    parsed = urlparse(url)
-    qs = parse_qs(parsed.query)
-
-    params = {}
-
-    for k, v in qs.items():
-        params[k] = v[0]
-
-    return params
+def is_agent(item):
+    agent = item.find("span", class_="item-owner-type")
+    return agent is not None
 
 
-def get_ads(params):
-
-    API = "https://kub.az/api/ads/search"
-
-    r = requests.get(API, params=params, timeout=30)
-
-    if r.status_code != 200:
-        return []
-
-    data = r.json()
-
-    if "ads" not in data:
-        return []
-
-    return data["ads"]
+def has_kupca(item):
+    cert = item.find("div", class_="item-certificate")
+    return cert is not None
 
 
-def is_agent(text):
-    t = text.lower()
-    return any(w in t for w in BLACKLIST)
+print("Start scraping kub.az")
 
+r = requests.get(URL, headers=headers)
 
-def has_kupca(text):
-    t = text.lower()
-    return any(w in t for w in KUPCA_WORDS)
+soup = BeautifulSoup(r.text, "html.parser")
 
+items = soup.find_all("div", class_="item")
 
-def main():
+for item in items:
 
-    seen = load_seen()
+    if is_agent(item):
+        continue
 
-    for search_url in SEARCH_URLS:
+    if not has_kupca(item):
+        continue
 
-        params = parse_query(search_url)
+    price = item.find("span", class_="price-amount")
+    link = item.find("a")
 
-        ads = get_ads(params)
+    if price and link:
 
-        for ad in ads[:20]:
+        price_text = price.text.strip()
+        link_text = "https://kub.az" + link["href"]
 
-            ad_id = str(ad.get("id"))
+        message = f"{price_text} AZN\n{link_text}"
 
-            if ad_id in seen:
-                continue
+        print("Send:", message)
 
-            title = ad.get("title", "")
-            description = ad.get("description", "")
-            price = ad.get("price", "")
-            url = f"https://kub.az/elan/{ad_id}"
-
-            text = (title + " " + description).lower()
-
-            if is_agent(text):
-                seen.add(ad_id)
-                continue
-
-            if not has_kupca(text):
-                seen.add(ad_id)
-                continue
-
-            message = f"{title}\nQiymət: {price}\n{url}"
-
-            send_telegram(message)
-
-            seen.add(ad_id)
-
-    save_seen(seen)
-
-
-if __name__ == "__main__":
-    main()
+        send(message)
