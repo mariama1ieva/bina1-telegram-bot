@@ -1,9 +1,9 @@
-name: kub bot
+name: bina-bot
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -12,16 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Install requirements
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-      - name: Run scraper
-        run: python scraper.py
+      - run: python scraper.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
