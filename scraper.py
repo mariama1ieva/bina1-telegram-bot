@@ -1,99 +1,59 @@
 import os
-import re
-import json
 import requests
-from bs4 import BeautifulSoup
+import json
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://bina.az/baki/alqi-satqi/menziller?has_bill_of_sale=true&location_ids%5B%5D=51&location_ids%5B%5D=33&location_ids%5B%5D=54&location_ids%5B%5D=52&location_ids%5B%5D=53&location_ids%5B%5D=405&location_ids%5B%5D=378&location_ids%5B%5D=179&location_ids%5B%5D=178&location_ids%5B%5D=100&location_ids%5B%5D=99&location_ids%5B%5D=200&location_ids%5B%5D=74&location_ids%5B%5D=69&location_ids%5B%5D=91&location_ids%5B%5D=81&location_ids%5B%5D=82&location_ids%5B%5D=85&location_ids%5B%5D=84&location_ids%5B%5D=83"
+API_URL = "https://bina.az/items/all"
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
+params = {
+    "city_id": 1,
+    "category_id": 1,
+    "has_bill_of_sale": "true"
 }
 
-SEEN_FILE = "seen.json"
+headers = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json"
+}
 
-
-def load_seen():
-    if os.path.exists(SEEN_FILE):
-        with open(SEEN_FILE) as f:
-            return set(json.load(f))
-    return set()
-
-
-def save_seen(seen):
-    with open(SEEN_FILE, "w") as f:
-        json.dump(list(seen), f)
-
-
-def send_photo(photo, caption):
-
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+def send(msg):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
     requests.post(url, data={
         "chat_id": CHAT_ID,
-        "photo": photo,
-        "caption": caption,
-        "parse_mode": "HTML"
+        "text": msg
     })
 
 
-print("Checking bina.az")
+print("Checking bina.az API")
 
-seen = load_seen()
+r = requests.get(API_URL, headers=headers, params=params)
 
-r = requests.get(URL, headers=headers)
+data = r.text
 
-soup = BeautifulSoup(r.text, "html.parser")
+print("Response length:", len(data))
 
-cards = soup.select(".items-i")
+items = []
 
-print("Found ads:", len(cards))
+try:
+    items = json.loads(data)["items"]
+except:
+    print("JSON parse failed")
 
-for card in cards:
+print("Found items:", len(items))
 
-    link_tag = card.select_one("a")
-    if not link_tag:
-        continue
+for item in items[:10]:
 
-    href = link_tag.get("href")
+    item_id = item["id"]
 
-    if not re.match(r"^/items/\d+$", href):
-        continue
+    link = f"https://bina.az/items/{item_id}"
 
-    link = "https://bina.az" + href
+    price = item["price"]
 
-    if link in seen:
-        continue
+    text = f"{price} AZN\n{link}"
 
-    price = card.select_one(".price-val")
-    title = card.select_one(".card-title")
-    location = card.select_one(".location")
-    image = card.select_one("img")
+    print("Sending:", link)
 
-    price_text = price.text.strip() if price else ""
-    title_text = title.text.strip() if title else ""
-    location_text = location.text.strip() if location else ""
-
-    image_url = image["src"] if image else None
-
-    caption = f"""
-🏠 <b>{title_text}</b>
-
-💰 <b>{price_text}</b>
-
-📍 {location_text}
-
-🔗 <a href="{link}">Elanı aç</a>
-"""
-
-    print("NEW:", link)
-
-    if image_url:
-        send_photo(image_url, caption)
-
-    seen.add(link)
-
-save_seen(seen)
+    send(text)
