@@ -146,5 +146,3 @@ with sync_playwright() as p:
         seen.add(full)
 
 save_seen(seen)
-
-browser.close()
