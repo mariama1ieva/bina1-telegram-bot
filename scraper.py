@@ -47,10 +47,7 @@ print("Opening browser")
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(
-        headless=True,
-        args=["--disable-blink-features=AutomationControlled"]
-    )
+    browser = p.chromium.launch(headless=True)
 
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
@@ -58,23 +55,20 @@ with sync_playwright() as p:
 
     page = context.new_page()
 
+    print("Loading bina.az")
+
     page.goto(URL, wait_until="domcontentloaded", timeout=60000)
 
-    page.wait_for_timeout(4000)
-
-    # daha çox elan yüklə
-    page.mouse.wheel(0, 15000)
-    page.wait_for_timeout(4000)
+    # kartların gəlməsini gözlə
+    page.wait_for_selector('[data-cy="item-card"]', timeout=30000)
 
     cards = page.query_selector_all('[data-cy="item-card"]')
 
     print("Found ads:", len(cards))
 
-    for card in cards:
+    for card in cards[:20]:
 
         text = card.inner_text().lower()
-
-        print("Card text:", text[:120])
 
         location_found = None
 
@@ -84,7 +78,6 @@ with sync_playwright() as p:
                 break
 
         if not location_found:
-            print("Skip location")
             continue
 
         link = card.query_selector('[data-cy="item-card-link"]')
@@ -100,18 +93,18 @@ with sync_playwright() as p:
         full = f"https://bina.az{href}"
 
         if full in seen:
-            print("Skip duplicate")
             continue
 
-        # elan səhifəsini aç
         ad_page = context.new_page()
 
         try:
+
             ad_page.goto(full, wait_until="domcontentloaded", timeout=60000)
 
             owner = ad_page.query_selector(".product-owner__info-region")
 
             if owner:
+
                 owner_text = owner.inner_text().lower()
 
                 if "agent" in owner_text or "vasitəçi" in owner_text:
@@ -147,3 +140,5 @@ with sync_playwright() as p:
         seen.add(full)
 
 save_seen(seen)
+
+browser.close()
