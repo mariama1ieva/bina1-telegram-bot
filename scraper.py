@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://bina.az/baki/alqi-satqi/menziller?has_bill_of_sale=true"
+URL = ""
 
 SEEN_FILE = "seen_ads.json"
 
