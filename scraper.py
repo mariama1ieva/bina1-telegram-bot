@@ -58,11 +58,13 @@ with sync_playwright() as p:
 
     page = context.new_page()
 
-    # ⚡ əsas düzəliş burada
     page.goto(URL, wait_until="domcontentloaded", timeout=60000)
 
-    # JS render üçün qısa gözləmə
     page.wait_for_timeout(4000)
+
+    # ⚡ scroll et ki daha çox elan yüklənsin
+    page.mouse.wheel(0, 8000)
+    page.wait_for_timeout(3000)
 
     cards = page.query_selector_all('[data-cy="item-card"]')
 
@@ -71,6 +73,8 @@ with sync_playwright() as p:
     for card in cards:
 
         text = card.inner_text().lower()
+
+        print("Card text:", text[:120])
 
         location_found = None
 
@@ -99,7 +103,6 @@ with sync_playwright() as p:
             print("Skip duplicate")
             continue
 
-        # elan səhifəsini açıb agent yoxla
         ad_page = context.new_page()
 
         try:
