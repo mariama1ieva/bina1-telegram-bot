@@ -58,9 +58,11 @@ with sync_playwright() as p:
 
     page = context.new_page()
 
-    page.goto(URL, wait_until="networkidle")
+    # ⚡ əsas düzəliş burada
+    page.goto(URL, wait_until="domcontentloaded", timeout=60000)
 
-    page.wait_for_timeout(5000)
+    # JS render üçün qısa gözləmə
+    page.wait_for_timeout(4000)
 
     cards = page.query_selector_all('[data-cy="item-card"]')
 
@@ -88,6 +90,9 @@ with sync_playwright() as p:
 
         href = link.get_attribute("href")
 
+        if not href:
+            continue
+
         full = f"https://bina.az{href}"
 
         if full in seen:
@@ -96,17 +101,22 @@ with sync_playwright() as p:
 
         # elan səhifəsini açıb agent yoxla
         ad_page = context.new_page()
-        ad_page.goto(full, wait_until="domcontentloaded")
 
-        owner = ad_page.query_selector(".product-owner__info-region")
+        try:
+            ad_page.goto(full, wait_until="domcontentloaded", timeout=60000)
 
-        if owner:
-            owner_text = owner.inner_text().lower()
+            owner = ad_page.query_selector(".product-owner__info-region")
 
-            if "agent" in owner_text or "vasitəçi" in owner_text:
-                print("Agent skipped:", full)
-                ad_page.close()
-                continue
+            if owner:
+                owner_text = owner.inner_text().lower()
+
+                if "agent" in owner_text or "vasitəçi" in owner_text:
+                    print("Agent skipped:", full)
+                    ad_page.close()
+                    continue
+
+        except:
+            print("Failed to open:", full)
 
         ad_page.close()
 
