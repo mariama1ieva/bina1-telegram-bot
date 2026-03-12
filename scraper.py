@@ -7,10 +7,32 @@ CHAT_ID = os.getenv("CHAT_ID")
 
 URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
 
+ALLOWED_LOCATIONS = [
+    "Əhmədli",
+    "Həzi Aslanov",
+    "Köhnə Günəşli",
+    "Yeni Günəşli",
+    "Bakıxanov",
+    "Qaraçuxur",
+    "Günəşli",
+    "8-ci kilometr",
+    "Massiv A",
+    "Massiv B",
+    "Massiv D",
+    "Massiv G",
+    "Massiv V",
+    "Qara Qarayev",
+    "Neftçilər",
+    "Xalqlar Dostluğu",
+    "Kristal Abşeron",
+    "Laçın ticarət mərkəzi",
+    "Neapol dairəsi",
+    "Ukrayna dairəsi"
+]
+
 
 def send(msg):
     api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
     requests.post(api, data={
         "chat_id": CHAT_ID,
         "text": msg
@@ -27,7 +49,7 @@ with sync_playwright() as p:
     )
 
     context = browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     )
 
     page = context.new_page()
@@ -40,7 +62,19 @@ with sync_playwright() as p:
 
     print("Found ads:", len(cards))
 
-    for card in cards[:10]:
+    for card in cards:
+
+        text = card.inner_text().lower()
+
+        allowed = False
+
+        for loc in ALLOWED_LOCATIONS:
+            if loc.lower() in text:
+                allowed = True
+                break
+
+        if not allowed:
+            continue
 
         link = card.query_selector('[data-cy="item-card-link"]')
 
