@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from playwright.sync_api import sync_playwright
 
@@ -7,37 +8,41 @@ CHAT_ID = os.getenv("CHAT_ID")
 
 URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
 
+SEEN_FILE = "seen_ads.json"
+
 ALLOWED_LOCATIONS = [
-    "Əhmədli",
-    "Həzi Aslanov",
-    "Köhnə Günəşli",
-    "Yeni Günəşli",
-    "Bakıxanov",
-    "Qaraçuxur",
-    "Günəşli",
-    "8-ci kilometr",
-    "Massiv A",
-    "Massiv B",
-    "Massiv D",
-    "Massiv G",
-    "Massiv V",
-    "Qara Qarayev",
-    "Neftçilər",
-    "Xalqlar Dostluğu",
-    "Kristal Abşeron",
-    "Laçın ticarət mərkəzi",
-    "Neapol dairəsi",
-    "Ukrayna dairəsi"
+    "əhmədli","həzi aslanov","köhnə günəşli","yeni günəşli","bakıxanov",
+    "qaraçuxur","günəşli","8-ci kilometr","massiv a","massiv b","massiv d",
+    "massiv g","massiv v","qara qarayev","neftçilər","xalqlar dostluğu",
+    "kristal abşeron","laçın ticarət mərkəzi","neapol dairəsi","ukrayna dairəsi"
 ]
 
 
-def send(msg):
-    api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(api, data={
+def load_seen():
+    if os.path.exists(SEEN_FILE):
+        with open(SEEN_FILE) as f:
+            return set(json.load(f))
+    return set()
+
+
+def save_seen(data):
+    with open(SEEN_FILE,"w") as f:
+        json.dump(list(data),f)
+
+
+def send_photo(photo, caption):
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+
+    requests.post(url, data={
         "chat_id": CHAT_ID,
-        "text": msg
+        "photo": photo,
+        "caption": caption,
+        "parse_mode": "HTML"
     })
 
+
+seen = load_seen()
 
 print("Opening browser")
 
@@ -66,10 +71,15 @@ with sync_playwright() as p:
 
         text = card.inner_text().lower()
 
+        # agent filter
+        if "agentlik" in text or "vasitəçi" in text:
+            continue
+
+        # location filter
         allowed = False
 
         for loc in ALLOWED_LOCATIONS:
-            if loc.lower() in text:
+            if loc in text:
                 allowed = True
                 break
 
@@ -85,8 +95,32 @@ with sync_playwright() as p:
 
         full = f"https://bina.az{href}"
 
+        if full in seen:
+            continue
+
+        price = card.query_selector('[data-cy="item-card-price-full"]')
+        price_text = price.inner_text() if price else ""
+
+        img = card.query_selector("img")
+        img_url = img.get_attribute("src") if img else ""
+
+        caption = f"""
+🏠 <b>Mənzil tapıldı</b>
+
+💰 <b>{price_text}</b>
+
+📍 Uyğun rayon tapıldı
+
+🔗 {full}
+"""
+
         print("Send:", full)
 
-        send(full)
+        if img_url:
+            send_photo(img_url, caption)
 
-    browser.close()
+        seen.add(full)
+
+save_seen(seen)
+
+browser.close()
