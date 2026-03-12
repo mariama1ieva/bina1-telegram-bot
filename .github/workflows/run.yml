@@ -24,3 +24,11 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+
+      - name: Commit seen ads
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@github.com"
+          git add seen_ads.json || true
+          git commit -m "update seen ads" || true
+          git push
