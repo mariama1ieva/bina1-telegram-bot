@@ -74,10 +74,7 @@ with sync_playwright() as p:
 
         text = card.inner_text().lower()
 
-        # agent filter
-        if "vasitəçi" in text or "agent" in text or "agentlik" in text:
-            print("Skip agent")
-            continue
+        print("Card text:", text[:120])
 
         location_found = None
 
@@ -105,6 +102,27 @@ with sync_playwright() as p:
         if full in seen:
             print("Skip duplicate")
             continue
+
+        # elan səhifəsini aç
+        ad_page = context.new_page()
+
+        try:
+            ad_page.goto(full, wait_until="domcontentloaded", timeout=60000)
+
+            owner = ad_page.query_selector(".product-owner__info-region")
+
+            if owner:
+                owner_text = owner.inner_text().lower()
+
+                if "agent" in owner_text or "vasitəçi" in owner_text:
+                    print("Agent skipped:", full)
+                    ad_page.close()
+                    continue
+
+        except:
+            print("Failed to open:", full)
+
+        ad_page.close()
 
         price = card.query_selector('[data-cy="item-card-price-full"]')
         price_text = price.inner_text() if price else ""
