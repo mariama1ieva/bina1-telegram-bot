@@ -70,7 +70,7 @@ with sync_playwright() as p:
 
     print("Found ads:", len(cards))
 
-    for card in cards[:25]:
+    for card in cards:
 
         text = card.inner_text().lower()
 
