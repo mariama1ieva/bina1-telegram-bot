@@ -26,8 +26,8 @@ def load_seen():
 
 
 def save_seen(data):
-    with open(SEEN_FILE,"w") as f:
-        json.dump(list(data),f)
+    with open(SEEN_FILE, "w") as f:
+        json.dump(list(data), f)
 
 
 def send_photo(photo, caption):
@@ -71,19 +71,14 @@ with sync_playwright() as p:
 
         text = card.inner_text().lower()
 
-        # agent filter
-        if "agentlik" in text or "vasitəçi" in text:
-            continue
-
-        # location filter
-        allowed = False
+        location_found = None
 
         for loc in ALLOWED_LOCATIONS:
             if loc in text:
-                allowed = True
+                location_found = loc
                 break
 
-        if not allowed:
+        if not location_found:
             continue
 
         link = card.query_selector('[data-cy="item-card-link"]')
@@ -98,6 +93,23 @@ with sync_playwright() as p:
         if full in seen:
             continue
 
+        # elan səhifəsini açıb agent yoxla
+        ad_page = context.new_page()
+
+        ad_page.goto(full, wait_until="domcontentloaded")
+
+        owner = ad_page.query_selector(".product-owner__info-region")
+
+        if owner:
+            owner_text = owner.inner_text().lower()
+
+            if "agent" in owner_text or "vasitəçi" in owner_text:
+                print("Agent skipped:", full)
+                ad_page.close()
+                continue
+
+        ad_page.close()
+
         price = card.query_selector('[data-cy="item-card-price-full"]')
         price_text = price.inner_text() if price else ""
 
@@ -107,9 +119,9 @@ with sync_playwright() as p:
         caption = f"""
 🏠 <b>Mənzil tapıldı</b>
 
-💰 <b>{price_text}</b>
+📍 <b>{location_found.title()}</b>
 
-📍 Uyğun rayon tapıldı
+💰 <b>{price_text}</b>
 
 🔗 {full}
 """
@@ -122,4 +134,3 @@ with sync_playwright() as p:
         seen.add(full)
 
 save_seen(seen)
-
