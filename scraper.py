@@ -7,27 +7,38 @@ CHAT_ID = os.getenv("CHAT_ID")
 
 URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
 
+
 def send(msg):
     api = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
     requests.post(api, data={
         "chat_id": CHAT_ID,
         "text": msg
     })
 
-print("Opening browser...")
+
+print("Opening browser")
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
+    browser = p.chromium.launch(
+        headless=True,
+        args=["--disable-blink-features=AutomationControlled"]
+    )
 
-    page.goto(URL)
+    context = browser.new_context(
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+    )
 
-    page.wait_for_selector('[data-cy="item-card"]')
+    page = context.new_page()
+
+    page.goto(URL, wait_until="networkidle")
+
+    page.wait_for_timeout(5000)
 
     cards = page.query_selector_all('[data-cy="item-card"]')
 
-    print("Found:", len(cards))
+    print("Found ads:", len(cards))
 
     for card in cards[:10]:
 
@@ -38,10 +49,10 @@ with sync_playwright() as p:
 
         href = link.get_attribute("href")
 
-        full_link = f"https://bina.az{href}"
+        full = f"https://bina.az{href}"
 
-        print("Sending:", full_link)
+        print("Send:", full)
 
-        send(full_link)
+        send(full)
 
     browser.close()
