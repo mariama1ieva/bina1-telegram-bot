@@ -57,10 +57,14 @@ with sync_playwright() as p:
 
     print("Loading bina.az")
 
-    page.goto(URL, wait_until="domcontentloaded", timeout=60000)
+    page.goto(URL, timeout=60000)
 
-    # kartların gəlməsini gözlə
-    page.wait_for_selector('[data-cy="item-card"]', timeout=30000)
+    # JS render üçün gözləmə
+    page.wait_for_timeout(7000)
+
+    # scroll
+    page.mouse.wheel(0, 15000)
+    page.wait_for_timeout(4000)
 
     cards = page.query_selector_all('[data-cy="item-card"]')
 
@@ -99,7 +103,9 @@ with sync_playwright() as p:
 
         try:
 
-            ad_page.goto(full, wait_until="domcontentloaded", timeout=60000)
+            ad_page.goto(full, timeout=60000)
+
+            ad_page.wait_for_timeout(2000)
 
             owner = ad_page.query_selector(".product-owner__info-region")
 
