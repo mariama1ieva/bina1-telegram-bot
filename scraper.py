@@ -123,4 +123,3 @@ with sync_playwright() as p:
 
 save_seen(seen)
 
-browser.close()
