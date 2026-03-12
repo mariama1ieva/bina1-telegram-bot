@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-URL = "https://bina.az/items/vipped?city_id=1&category_id=1&has_bill_of_sale=true"
+URL = "https://bina.az/baki/alqi-satqi/menziller?has_bill_of_sale=true"
 
 SEEN_FILE = "seen_ads.json"
 
@@ -31,7 +31,6 @@ def save_seen(data):
 
 
 def send_photo(photo, caption):
-
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
 
     requests.post(url, data={
@@ -79,6 +78,7 @@ with sync_playwright() as p:
                 break
 
         if not location_found:
+            print("Skip location")
             continue
 
         link = card.query_selector('[data-cy="item-card-link"]')
@@ -91,11 +91,11 @@ with sync_playwright() as p:
         full = f"https://bina.az{href}"
 
         if full in seen:
+            print("Skip duplicate")
             continue
 
         # elan səhifəsini açıb agent yoxla
         ad_page = context.new_page()
-
         ad_page.goto(full, wait_until="domcontentloaded")
 
         owner = ad_page.query_selector(".product-owner__info-region")
@@ -120,10 +120,9 @@ with sync_playwright() as p:
 🏠 <b>Mənzil tapıldı</b>
 
 📍 <b>{location_found.title()}</b>
-
 💰 <b>{price_text}</b>
 
-🔗 {full}
+🔗 <a href="{full}">Elana bax</a>
 """
 
         print("Send:", full)
