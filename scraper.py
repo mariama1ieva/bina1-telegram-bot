@@ -63,8 +63,8 @@ with sync_playwright() as p:
     page.wait_for_timeout(8000)
 
     # scroll
-    page.mouse.wheel(0, 20000)
-    page.wait_for_timeout(5000)
+    page.mouse.wheel(0, 30000)
+    page.wait_for_timeout(10000)
 
     cards = page.query_selector_all('[data-cy="item-card"]')
 
