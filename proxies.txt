@@ -1,3 +1,10 @@
-http://user:pass@ip1:port
-http://user:pass@ip2:port
-http://user:pass@ip3:port
+http://xmlxoxta:17xzmib2c5iw@31.59.20.176:6754
+http://xmlxoxta:17xzmib2c5iw@23.95.150.145:6114
+http://xmlxoxta:17xzmib2c5iw@198.23.239.134:6540
+http://xmlxoxta:17xzmib2c5iw@45.38.107.97:6014
+http://xmlxoxta:17xzmib2c5iw@107.172.163.27:6543
+http://xmlxoxta:17xzmib2c5iw@198.105.121.200:6462
+http://xmlxoxta:17xzmib2c5iw@64.137.96.74:6641
+http://xmlxoxta:17xzmib2c5iw@216.10.27.159:6837
+http://xmlxoxta:17xzmib2c5iw@142.111.67.146:5611
+http://xmlxoxta:17xzmib2c5iw@191.96.254.138:6185
