@@ -92,7 +92,7 @@ async def run():
         print("Opening page...")
         await page.goto(FILTER_URL, timeout=60000)
 
-        await page.wait_for_load_state("networkidle")
+        await page.wait_for_selector("a[href^='/items/']", timeout=30000)
         await page.wait_for_timeout(5000)
 
         await page.mouse.wheel(0, 3000)
@@ -151,7 +151,11 @@ async def run():
 
 
 async def main():
-    await run()
+    print("MAIN STARTED ⚡")
+
+    while True:
+        await run()
+        await asyncio.sleep(600)
 
 
 asyncio.run(main())
