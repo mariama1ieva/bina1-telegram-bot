@@ -7,7 +7,6 @@ from config import FILTER_URL
 print("STARTED 🚀")
 
 
-# 🔹 SƏNİN KRİTERİYALAR
 ALLOWED_LOCATIONS = [
     "əhmədli", "həzi aslanov", "köhnə günəşli", "yeni günəşli",
     "8-ci kilometr", "bakıxanov", "günəşli", "qaraçuxur",
@@ -21,57 +20,52 @@ ALLOWED_LANDMARKS = [
 ]
 
 
-# 🔹 FILTER FUNCTION
 async def is_valid_listing(page):
-    text = await page.content()
-    text = text.lower()
+    try:
+        text = await page.content()
+        text = text.lower()
 
-    # mülkiyyətçi
-    if "mülkiyyətçi" not in text:
+        # ❌ agent blok
+        if "agent" in text or "vasitəçi" in text:
+            return False
+
+        # ✅ mülkiyyətçi
+        if "mülkiyyətçi" not in text:
+            return False
+
+        # ✅ çıxarış
+        if "çıxarış" not in text:
+            return False
+
+        # ✅ rayon / metro (mütləq)
+        if not any(loc in text for loc in ALLOWED_LOCATIONS):
+            return False
+
+        # ⚠️ nişangah (yumşaq filter)
+        if not any(lm in text for lm in ALLOWED_LANDMARKS):
+            print("No landmark ⚠️ (keçiririk)")
+
+        return True
+
+    except:
         return False
 
-    # agent blok
-    if "agent" in text or "vasitəçi" in text:
-        return False
 
-    # çıxarış
-    if "çıxarış" not in text:
-        return False
-
-    # location filter
-    if not any(loc in text for loc in ALLOWED_LOCATIONS):
-        return False
-
-    # landmark (optional)
-    if not any(lm in text for lm in ALLOWED_LANDMARKS):
-        return False
-
-    return True
-
-
-# 🔹 DATA PARSE
 async def parse_listing(page):
     try:
-        # qiymət
         price_el = await page.query_selector(".price-val")
         price = await price_el.inner_text() if price_el else "N/A"
 
-        # otaq
         room_el = await page.query_selector(".product-properties__i-value")
         rooms = await room_el.inner_text() if room_el else "N/A"
 
-        # location
         loc_el = await page.query_selector(".product-map__left__address")
         location = await loc_el.inner_text() if loc_el else "N/A"
 
-        # şəkil
-        img_el = await page.query_selector("img[src]")
-        image = await img_el.get_attribute("src") if img_el else None
-
-        return price, rooms, location, image
+        return price, rooms, location
 
     except:
-        return "N/A", "N/A", "N/A", None
+        return "N/A", "N/A", "N/A"
 
 
 async def run():
@@ -79,26 +73,29 @@ async def run():
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
-         headless=True,
-         args=["--no-sandbox", "--disable-dev-shm-usage"]
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
         )
 
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        )
-
+        context = await browser.new_context()
         page = await context.new_page()
 
         print("Opening page...")
-        await page.goto(FILTER_URL, timeout=60000)
 
-        await page.wait_for_selector("a[href^='/items/']", timeout=30000)
-        await page.wait_for_timeout(5000)
+        try:
+            await page.goto(FILTER_URL, timeout=60000)
+        except:
+            print("Page load failed ❌")
+            await browser.close()
+            return
 
-        await page.mouse.wheel(0, 3000)
-        await page.wait_for_timeout(3000)
+        # 🔥 crash etməyən wait
+        try:
+            await page.wait_for_selector("a[href^='/items/']", timeout=15000)
+        except:
+            print("Fallback wait...")
+            await page.wait_for_timeout(5000)
 
-        # 🔥 düzgün linkləri seç
         elements = await page.query_selector_all("a[href^='/items/']")
 
         ads = []
@@ -108,18 +105,19 @@ async def run():
             if href and href.replace("/items/", "").isdigit():
                 ads.append(href)
 
-        print("REAL ADS:", len(ads))
+        ads = list(set(ads))
 
-        for url in ads[:5]:
+        print("ADS FOUND:", len(ads))
+
+        for url in ads[:15]:  # daha çox yoxlayırıq
             try:
                 full_url = "https://bina.az" + url
                 print("OPENING:", full_url)
 
                 detail = await context.new_page()
                 await detail.goto(full_url, timeout=60000)
-                await detail.wait_for_timeout(3000)
+                await detail.wait_for_timeout(2000)
 
-                # 🔥 FILTER
                 if not await is_valid_listing(detail):
                     print("FILTERED ❌")
                     await detail.close()
@@ -127,13 +125,11 @@ async def run():
 
                 print("MATCH FOUND ✅")
 
-                # parse
-                price, rooms, location, image = await parse_listing(detail)
+                price, rooms, location = await parse_listing(detail)
 
-                # duplicate check
                 if is_new(full_url):
                     message = f"""
-🏠 {rooms} otaqlı
+🏠 {rooms} otaqlı mənzil
 💰 {price}
 📍 {location}
 
@@ -145,7 +141,7 @@ async def run():
                 await detail.close()
 
             except Exception as e:
-                print("Error:", e)
+                print("DETAIL ERROR:", e)
 
         await browser.close()
 
@@ -154,7 +150,11 @@ async def main():
     print("MAIN STARTED ⚡")
 
     while True:
-        await run()
+        try:
+            await run()
+        except Exception as e:
+            print("MAIN ERROR:", e)
+
         await asyncio.sleep(600)
 
 
