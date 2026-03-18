@@ -77,7 +77,10 @@ async def run():
             args=["--no-sandbox", "--disable-dev-shm-usage"]
         )
 
-        context = await browser.new_context()
+        context = await browser.new_context(
+           user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+           viewport={"width": 1280, "height": 800}
+        )
         page = await context.new_page()
 
         print("Opening page...")
@@ -91,7 +94,7 @@ async def run():
 
         # 🔥 crash etməyən wait
         try:
-            await page.wait_for_selector("a[href^='/items/']", timeout=15000)
+            await page.wait_for_selector("a[href*='/items/']", timeout=15000)
         except:
             print("Fallback wait...")
             await page.wait_for_timeout(5000)
@@ -116,7 +119,7 @@ async def run():
 
                 detail = await context.new_page()
                 await detail.goto(full_url, timeout=60000)
-                await detail.wait_for_timeout(2000)
+                await detail.wait_for_timeout(5000)
 
                 if not await is_valid_listing(detail):
                     print("FILTERED ❌")
