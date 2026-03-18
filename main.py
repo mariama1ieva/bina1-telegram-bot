@@ -4,7 +4,7 @@ from database import is_new
 from notifier import send_message
 from config import FILTER_URL
 
-print("STARTED 🚀")
+print("APP STARTING...", flush=True)
 
 
 ALLOWED_LOCATIONS = [
@@ -25,25 +25,20 @@ async def is_valid_listing(page):
         text = await page.content()
         text = text.lower()
 
-        # ❌ agent blok
         if "agent" in text or "vasitəçi" in text:
             return False
 
-        # ✅ mülkiyyətçi
         if "mülkiyyətçi" not in text:
             return False
 
-        # ✅ çıxarış
         if "çıxarış" not in text:
             return False
 
-        # ✅ rayon / metro (mütləq)
         if not any(loc in text for loc in ALLOWED_LOCATIONS):
             return False
 
-        # ⚠️ nişangah (yumşaq filter)
         if not any(lm in text for lm in ALLOWED_LANDMARKS):
-            print("No landmark ⚠️ (keçiririk)")
+            print("No landmark ⚠️", flush=True)
 
         return True
 
@@ -69,7 +64,7 @@ async def parse_listing(page):
 
 
 async def run():
-    print("RUN STARTED 🔥")
+    print("RUN STARTED 🔥", flush=True)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(
@@ -78,28 +73,31 @@ async def run():
         )
 
         context = await browser.new_context(
-           user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-           viewport={"width": 1280, "height": 800}
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+            viewport={"width": 1280, "height": 800}
         )
+
         page = await context.new_page()
 
-        print("Opening page...")
+        print("Opening page...", flush=True)
 
         try:
             await page.goto(FILTER_URL, timeout=60000)
         except:
-            print("Page load failed ❌")
+            print("Page load failed ❌", flush=True)
             await browser.close()
             return
 
-        # 🔥 crash etməyən wait
-        try:
-            await page.wait_for_selector("a[href*='/items/']", timeout=15000)
-        except:
-            print("Fallback wait...")
-            await page.wait_for_timeout(5000)
+        # 🔥 gözlə ki JS yüklənsin
+        await page.wait_for_timeout(7000)
 
-        elements = await page.query_selector_all("a[href^='/items/']")
+        # 🔥 SCROLL (ƏN VACİB)
+        for _ in range(5):
+            await page.mouse.wheel(0, 3000)
+            await page.wait_for_timeout(1000)
+
+        # 🔥 ELANLARI TAP
+        elements = await page.query_selector_all("a[href*='/items/']")
 
         ads = []
         for el in elements:
@@ -110,23 +108,23 @@ async def run():
 
         ads = list(set(ads))
 
-        print("ADS FOUND:", len(ads))
+        print("ADS FOUND:", len(ads), flush=True)
 
-        for url in ads[:15]:  # daha çox yoxlayırıq
+        for url in ads[:15]:
             try:
                 full_url = "https://bina.az" + url
-                print("OPENING:", full_url)
+                print("OPENING:", full_url, flush=True)
 
                 detail = await context.new_page()
                 await detail.goto(full_url, timeout=60000)
-                await detail.wait_for_timeout(5000)
+                await detail.wait_for_timeout(3000)
 
                 if not await is_valid_listing(detail):
-                    print("FILTERED ❌")
+                    print("FILTERED ❌", flush=True)
                     await detail.close()
                     continue
 
-                print("MATCH FOUND ✅")
+                print("MATCH FOUND ✅", flush=True)
 
                 price, rooms, location = await parse_listing(detail)
 
@@ -139,26 +137,26 @@ async def run():
 🔗 {full_url}
 """
                     send_message(message)
-                    print("SENT TO TELEGRAM 📩")
+                    print("SENT TO TELEGRAM 📩", flush=True)
 
                 await detail.close()
 
             except Exception as e:
-                print("DETAIL ERROR:", e)
+                print("DETAIL ERROR:", e, flush=True)
 
         await browser.close()
 
 
 async def main():
-    print("MAIN STARTED ⚡")
+    print("MAIN STARTED ⚡", flush=True)
 
     while True:
         try:
             await run()
         except Exception as e:
-            print("MAIN ERROR:", e)
+            print("MAIN ERROR:", e, flush=True)
 
-        await asyncio.sleep(600)
+        await asyncio.sleep(600)  # 10 dəqiqə
 
 
 asyncio.run(main())
