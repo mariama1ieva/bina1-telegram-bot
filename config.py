@@ -1,8 +1,6 @@
-TELEGRAM_TOKEN = "YOUR_TOKEN"
-CHAT_ID = "YOUR_CHAT_ID"
+TELEGRAM_TOKEN = "8734679285:AAHaJf4IzDGqv4cGv22e8fxsfuxSMDyxMbc"
+CHAT_ID = "8398386188"
 
-BASE_URL = "https://bina.az/alqi-satqi/menziller"
-
-FILTER_URL = BASE_URL + "?has_cup=true"
+FILTER_URL = "https://bina.az/baki/alqi-satqi/menziller"
 
 CHECK_INTERVAL = 600  # 10 dəqiqə
